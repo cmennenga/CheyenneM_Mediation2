@@ -65,57 +65,102 @@ let green = ["🟩", "🟢", "🤢", "💚",
             "✅", "✳️", "❎", "💹", 
             "🈯", "❇️", "♻️"]
 
-// black emojis
-let black = ["⬛", "◼️", "◾", "▪️", 
-            "⚫", "🖤", "🌑", "🌚", 
-            "🥷", "🕴️", "♟️", "🕳️",
-            "💣", "🪨", "👣", "🎩", 
-            "🦅", "🦇", "🦡", "🦝", 
-            "🦨", "🦍", "🐈‍⬛", "📓", 
-            "👁️‍🗨️", "♣️", "♠️", "🏴‍☠️",
-            "🏴", "🕋", "🕶️", "🎓",
-            "🐦‍⬛", "🐜", "🕷️", "🦟", 
-            "🐃", "🐾"]
+
+// tracking paint pallete
+function pallete(key) {
+  if (key === 'R') return red
+  if (key === 'Y') return yellow
+  if (key === 'B') return blue
+  if (key === 'P') return purple
+  if (key === 'O') return orange 
+  if (key === 'G') return green
+  return []
+}
+  
+// tracking mixed colors
+function mixing(color1, color2) {
+  const color_combos = {
+    'RY': 'O', 'YR': 'O',
+    'RB': 'P', 'BR': 'P',
+    'YB': 'G', 'BY': 'G'
+  }
+  return color_combos[color1 + color2]
+}
 
 // tracking color user wants and when they're drawing 
 let currentColor = null
 let drawing = false
+let mix = false
+let track_emojis = []
 
-nn.on('keyDown', function(event) {
+let mouseX = 0
+let mouseY = 0
+
+// listening for keys
+nn.on('keydown', function(event) {
   const key = event.key.toUpperCase()
   if (['R', 'Y', 'B'].includes(key)) {
       currentColor = key
       }
+  else if (key === 'M') {
+    mix = !mix
+  }
 })
 
-nn.on('mouseDown', function() {
+// tracking the mouse
+nn.on('mousedown', function() {
   drawing = true
 })
 
-nn.on('mouseUp', function() {
+nn.on('mouseup', function() {
   drawing = false
 })
 
+// drawing function 
 function drawEmoji (color) {
-  let color_list = []
-  if (color === 'R') color_list = red
-  else if (color === 'Y') color_list = yellow
-  else if (color === 'B') color_list = blue
+  if (mix) {
+    for (let i = 0; i < track_emojis.length; i++) {
+      const e = track_emojis[i]
+      const dx = mouseX - e.x
+      const dy = mouseY - e.y
+      const dist = Math.sqrt((dx * dx) + (dy * dy))
+      if (dist < 42) {
+        const newMix = mixing(color, e.color)
+        if (newMix) {
+          const newEmoji = nn.random(pallete(newMix))
+          e.el.content(newEmoji)
+          e.color = newMix
+        }
+      }
+    }
+  }
+  const color_list = pallete(color)
+  const emoji = nn.random(color_list)
   
-  nn.create('span')
-    .content(nn.random(color_list))
-    .css({
-      position: 'absolute',
-      left: nn.mouseX,
-      top: nn.mouseY
-    })
-    .addTo('body') 
+  const emojiEl = nn.create('span')
+        .content(emoji)
+        .css({
+          position: 'absolute',
+          left: mouseX + 'px',
+          top: mouseY + 'px',
+          fontSize: '30px',
+          pointerEvents: 'none'
+        })
+        .addTo('body')
+  track_emojis.push({    //storing each emoji
+    el: emojiEl,
+    x: mouseX,
+    y: mouseY,
+    color: color
+  })
 }
 
-nn.on('update', function () {
+// triggers actual drawing  
+nn.on('mousemove', function(event) {
+  mouseX = event.clientX
+  mouseY = event.clientY
   if (drawing && currentColor) {
     drawEmoji(currentColor)
   }
 })
-  
 </script>
